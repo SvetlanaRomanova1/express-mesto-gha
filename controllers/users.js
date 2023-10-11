@@ -58,6 +58,7 @@ module.exports.updateProfile = (req, res) => {
   }
 
   const updatedFields = {};
+
   allowedFields.forEach((field) => {
     if (req.body[field]) {
       updatedFields[field] = req.body[field];
