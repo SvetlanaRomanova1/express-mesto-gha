@@ -26,11 +26,9 @@ module.exports.createCard = (req, res) => {
     return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
   }
 
-  if (req) {
-    return Card.create({ name, link, owner })
-      .then((card) => res.status(201).send({ data: card }))
-      .catch(() => res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка')));
-  }
+  return Card.create({ name, link, owner })
+    .then((card) => res.status(201).send({ data: card }))
+    .catch(() => res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка')));
 };
 
 // Контроллер для удаления карточки по идентификатору
