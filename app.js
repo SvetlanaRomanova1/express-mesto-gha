@@ -30,7 +30,6 @@ app.use((req, res, next) => {
 
 // Использование роутов пользователей
 app.use('/users', require('./routes/users'));
-app.use('/users/me', require('./routes/users'));
 app.use('/cards', require('./routes/cards'));
 
 const PORT = process.env.PORT || 3000;

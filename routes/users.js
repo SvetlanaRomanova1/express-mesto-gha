@@ -16,7 +16,7 @@ router.get('/:userId', getUserById);
 // Роутер для создания пользователя
 router.post('/', createUser);
 // Роутер для обновления профиля пользователя
-router.patch('/', updateProfile);
+router.patch('/me', updateProfile);
 // Роутер для обновления аватара пользователя
 router.patch('/me/avatar', updateAvatar);
 

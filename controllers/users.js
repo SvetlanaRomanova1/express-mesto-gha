@@ -49,16 +49,20 @@ module.exports.updateProfile = (req, res) => {
 
   const allowedFields = ['name', 'about'];
 
+  if (!allowedFields.every(((item) => req.body[item]))) {
+    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
+  }
+
+  if (req.body.name && req.body.name.length >= 30) {
+    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
+  }
+
   const updatedFields = {};
   allowedFields.forEach((field) => {
     if (req.body[field]) {
       updatedFields[field] = req.body[field];
     }
   });
-
-  if (Object.keys(updatedFields).length === 0) {
-    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
-  }
 
   User.findByIdAndUpdate(userId, { $set: updatedFields }, { new: true })
     .then((updatedUser) => {
