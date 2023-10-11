@@ -18,16 +18,30 @@ module.exports.createCard = (req, res) => {
   const { name, link } = req.body;
   const owner = req.user && req.user._id;
 
-  Card.create({ name, link, owner })
-    .then((card) => res.status(201).send({ data: card }))
-    .catch(() => res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка')));
+  if (typeof name === 'string' && name.length <= 1) {
+    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
+  }
+
+  if ((req.body.name && req.body.name.length >= 30) || !req.body.name || !req.body.link) {
+    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
+  }
+
+  if (req) {
+    return Card.create({ name, link, owner })
+      .then((card) => res.status(201).send({ data: card }))
+      .catch(() => res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка')));
+  }
 };
 
 // Контроллер для удаления карточки по идентификатору
 module.exports.deleteCardId = (req, res) => {
   const { cardId } = req.params;
 
-  Card.findByIdAndDelete(cardId)
+  if (!mongoose.Types.ObjectId.isValid(cardId)) {
+    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Некорректный формат _id карточки'));
+  }
+
+  return Card.findByIdAndDelete(cardId)
     .then((card) => {
       if (!card) {
         return res.status(ERROR_CODE_NOT_FOUND).send(errorResponse(`Карточка с _id ${req.params.cardId} не найдена`));
@@ -60,8 +74,16 @@ module.exports.likeCard = (req, res) => {
       res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка'));
     });
 };
+
+// Контроллер для удаления лайка к карточке
 module.exports.dislikeCard = (req, res) => {
-  Card.findByIdAndUpdate(
+  const { cardId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(cardId)) {
+    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Некорректный формат _id карточки'));
+  }
+
+  return Card.findByIdAndUpdate(
     req.params.cardId,
     { $pull: { likes: req.user._id } }, // убрать _id из массива
     { new: true },
@@ -70,6 +92,7 @@ module.exports.dislikeCard = (req, res) => {
       if (!updatedCard) {
         return res.status(ERROR_CODE_NOT_FOUND).send(errorResponse('Карточка не найдена'));
       }
+
       return res.status(200).send({ data: updatedCard });
     })
     .catch(() => {

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/user');
 //  Коды ошибок
 const ERROR_CODE_BAD_REQUEST = 400;
@@ -16,7 +17,12 @@ module.exports.getUsers = (req, res) => {
 // Контроллер для получения пользователя по ID
 module.exports.getUserById = (req, res) => {
   const { userId } = req.params;
-  User.findById(userId)
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Пользователь по указанному _id не найден'));
+  }
+
+  return User.findById(userId)
     .then((user) => {
       if (!user) {
         return res.status(ERROR_CODE_NOT_FOUND).send(errorResponse('Пользователь по указанному _id не найден'));

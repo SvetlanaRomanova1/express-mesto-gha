@@ -32,6 +32,11 @@ app.use((req, res, next) => {
 app.use('/users', require('./routes/users'));
 app.use('/cards', require('./routes/cards'));
 
+// Middleware for handling undefined routes
+app.use((req, res) => {
+  res.status(404).json({ message: 'Not Found' });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
