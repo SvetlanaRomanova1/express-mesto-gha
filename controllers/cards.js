@@ -32,13 +32,12 @@ module.exports.deleteCardId = (req, res) => {
       if (!card) {
         return res.status(ERROR_CODE_NOT_FOUND).send(errorResponse(`Карточка с _id ${req.params.cardId} не найдена`));
       }
-      res.send({ data: card });
+      return res.send({ data: card });
     })
     .catch(() => res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка')));
 };
 
 // Контроллер для добавления лайка к карточке
-// eslint-disable-next-line consistent-return
 module.exports.likeCard = (req, res) => {
   const { cardId } = req.params;
 
@@ -46,7 +45,7 @@ module.exports.likeCard = (req, res) => {
     return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Некорректный формат _id карточки'));
   }
 
-  Card.findByIdAndUpdate(
+  return Card.findByIdAndUpdate(
     cardId,
     { $addToSet: { likes: req.user._id } }, // добавить _id в массив, если его там нет
     { new: true },
@@ -55,7 +54,7 @@ module.exports.likeCard = (req, res) => {
       if (!updatedCard) {
         return res.status(ERROR_CODE_NOT_FOUND).send(errorResponse('Карточка не найдена'));
       }
-      res.status(200).send({ data: updatedCard });
+      return res.status(200).send({ data: updatedCard });
     })
     .catch(() => {
       res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка'));
@@ -71,7 +70,7 @@ module.exports.dislikeCard = (req, res) => {
       if (!updatedCard) {
         return res.status(ERROR_CODE_NOT_FOUND).send(errorResponse('Карточка не найдена'));
       }
-      res.status(200).send({ data: updatedCard });
+      return res.status(200).send({ data: updatedCard });
     })
     .catch(() => {
       res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка'));
