@@ -133,11 +133,22 @@ module.exports.updateProfile = (req, res, next) => {
 };
 
 // Контроллер для получения информации о текущем пользователе
-module.exports.getCurrentUser = (req, res) => {
-  const currentUser = req.user;
-
-  // Возвращаем информацию о текущем пользователе
-  return res.json(currentUser);
+module.exports.getCurrentUser = (req, res, next) => {
+  const userId = req.user._id;
+  User.findById(userId)
+    .orFail(() => {
+      throw new NotFoundError('Пользователь по указанному _id не найден');
+    })
+    .then((user) => {
+      res.send(user);
+    })
+    .catch((e) => {
+      if (e.name === 'CastError') {
+        next(new BadRequestError('Запрашиваемый пользователь не найден'));
+      } else {
+        next(e);
+      }
+    });
 };
 
 // Контроллер для обновления аватар

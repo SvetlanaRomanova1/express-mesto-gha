@@ -12,6 +12,7 @@ const {
 
 // Роутер для получения всех пользователей
 router.get('/', getUsers);
+router.get('/me', getCurrentUser);
 // Роутер для получения пользователя по ID
 router.get('/:userId', celebrate({
   params: Joi.object().keys({
@@ -31,6 +32,5 @@ router.patch('/me/avatar', celebrate({
     avatar: Joi.string().regex(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/),
   }),
 }), updateAvatar);
-router.get('/users/me', getCurrentUser);
 
 module.exports = router;
