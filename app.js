@@ -37,11 +37,9 @@ app.use((req, res) => {
 });
 
 // наш централизованный обработчик
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   // если у ошибки нет статуса, выставляем 500
   const { statusCode = 500, message } = err;
-  console.log({ statusCode, message });
-
   res
     .status(statusCode)
     .send({
