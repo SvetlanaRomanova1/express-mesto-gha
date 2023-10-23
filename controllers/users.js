@@ -38,7 +38,7 @@ module.exports.createUser = (req, res, next) => {
   const {
     name = 'Жак-Ив Кусто',
     about = 'Исследователь',
-    avatar = 'ссылка',
+    avatar,
     email,
     password,
   } = req.body;
@@ -55,15 +55,7 @@ module.exports.createUser = (req, res, next) => {
       .then((user) => {
         res.status(201).send({ data: user });
       })
-      .catch((error) => {
-        if (error.name === 'ValidationError') {
-          next(new BadRequestError('Введены некорректные данные'));
-        } else if (error.code === 11000) {
-          next(new Conflict('Такой пользователь уже существует!)'));
-        } else {
-          next(error);
-        }
-      });
+      .catch(next);
   });
 };
 
