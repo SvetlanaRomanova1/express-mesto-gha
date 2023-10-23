@@ -18,7 +18,6 @@ module.exports.getUsers = (req, res, next) => {
 // Контроллер для получения пользователя по ID
 module.exports.getUserById = (req, res, next) => {
   const { userId } = req.params;
-
   User.findById(userId)
     .orFail(() => {
       throw new NotFoundError('Пользователь по указанному _id не найден');

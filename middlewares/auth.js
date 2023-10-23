@@ -5,7 +5,6 @@ const SECRET_KEY = 'your-secret-key';
 
 module.exports = (req, res, next) => {
   const { authorization } = req.headers;
-  console.log(req.headers);
 
   if (!authorization || !authorization.startsWith('Bearer')) {
     throw new UnauthorizedError('Необходима авторизация!');
