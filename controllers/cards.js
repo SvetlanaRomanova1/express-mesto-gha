@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const Card = require('../models/card');
 const NotFoundError = require('../errors/not-found-error');
 const BadRequestError = require('../errors/bad-request-error');
-const ServerError = require('../errors/server-error');
 const Forbidden = require('../errors/forbidden-error');
 
 // Контроллер для получения всех карточек
@@ -33,23 +32,29 @@ module.exports.createCard = (req, res, next) => {
 module.exports.deleteCardId = (req, res, next) => {
   const { cardId } = req.params;
   const userId = req.user._id;
-
-  if (!mongoose.Types.ObjectId.isValid(cardId)) {
-    throw new BadRequestError('Некорректный формат _id карточки');
-  }
-
-  return Card.findByIdAndDelete(cardId)
-    .then((card) => {
-      if (!card) {
-        throw new NotFoundError(`Карточка с _id ${req.params.cardId} не найдена`);
-      }
-      if (card.owner === userId) {
-        return res.send({ data: card });
-      }
-      // Запрещено удалять
-      throw new Forbidden('Вы не можете удалить эту картинку');
+  Card.findById(cardId)
+    .orFail(() => {
+      throw new NotFoundError('Карточка с указанным _id не найдена');
     })
-    .catch(next);
+    .then((card) => {
+      const owner = card.owner.toString();
+      if (userId === owner) {
+        Card.deleteOne(card)
+          .then(() => {
+            res.send(card);
+          })
+          .catch(next);
+      } else {
+        throw new Forbidden('Невозможно удалить карточку');
+      }
+    })
+    .catch((e) => {
+      if (e.name === 'CastError') {
+        next(new BadRequestError('Переданы некорректные данные удаления'));
+      } else {
+        next(e);
+      }
+    });
 };
 
 // Контроллер для добавления лайка к карточке
