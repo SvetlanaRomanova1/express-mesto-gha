@@ -19,10 +19,6 @@ module.exports.getUsers = (req, res, next) => {
 module.exports.getUserById = (req, res, next) => {
   const { userId } = req.params;
 
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    throw new BadRequestError('Пользователь по указанному _id не найден');
-  }
-
   return User.findById(userId)
     .then((user) => {
       if (!user) {
@@ -38,7 +34,7 @@ module.exports.createUser = (req, res, next) => {
   const {
     name = 'Жак-Ив Кусто',
     about = 'Исследователь',
-    avatar,
+    avatar = 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
     email,
     password,
   } = req.body;
@@ -59,7 +55,6 @@ module.exports.createUser = (req, res, next) => {
         res.status(201).send({ data: userWithoutPassword });
       })
       .catch((error) => {
-        console.log(error.name, 33);
         if (error.name === 'ValidationError') {
           next(new BadRequestError('Введены некорректные данные'));
         } else if (error.code === 11000) {
