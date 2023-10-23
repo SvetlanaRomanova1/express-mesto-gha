@@ -53,7 +53,10 @@ module.exports.createUser = (req, res, next) => {
       name, about, avatar, email, password: hash,
     })
       .then((user) => {
-        res.status(201).send({ data: user });
+        // Exclude the 'password' field from the user object
+        const userWithoutPassword = user.toObject();
+        delete userWithoutPassword.password;
+        res.status(201).send({ data: userWithoutPassword });
       })
       .catch((error) => {
         if (error.name === 'ValidationError') {
