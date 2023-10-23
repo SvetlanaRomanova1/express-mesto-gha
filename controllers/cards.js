@@ -81,23 +81,22 @@ module.exports.likeCard = (req, res, next) => {
 
 // Контроллер для удаления лайка к карточке
 module.exports.dislikeCard = (req, res, next) => {
-  const { cardId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(cardId)) {
-    throw new BadRequestError('Некорректный формат _id карточки');
-  }
-
-  return Card.findByIdAndUpdate(
+  Card.findByIdAndUpdate(
     req.params.cardId,
     { $pull: { likes: req.user._id } }, // убрать _id из массива
     { new: true },
   )
-    .then((updatedCard) => {
-      if (!updatedCard) {
-        throw new NotFoundError('Карточка не найдена');
-      }
-
-      return res.status(200).send({ data: updatedCard });
+    .orFail(() => {
+      throw new NotFoundError('Передан несуществующий _id карточки');
     })
-    .catch(next);
+    .then((card) => {
+      res.send(card);
+    })
+    .catch((e) => {
+      if (e.name === 'CastError') {
+        next(new BadRequestError('Переданы некорректные данные для снятия лайка'));
+      } else {
+        next(e);
+      }
+    });
 };
