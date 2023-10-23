@@ -19,14 +19,20 @@ module.exports.getUsers = (req, res, next) => {
 module.exports.getUserById = (req, res, next) => {
   const { userId } = req.params;
 
-  return User.findById(userId)
-    .then((user) => {
-      if (!user) {
-        throw new NotFoundError('Нет пользователя с таким id');
-      }
-      return res.send({ data: user });
+  User.findById(userId)
+    .orFail(() => {
+      throw new NotFoundError('Пользователь по указанному _id не найден');
     })
-    .catch(next);
+    .then((user) => {
+      res.send(user);
+    })
+    .catch((e) => {
+      if (e.name === 'CastError') {
+        next(new BadRequestError('Запрашиваемый пользователь не найден'));
+      } else {
+        next(e);
+      }
+    });
 };
 
 // Контроллер для создания пользователей
