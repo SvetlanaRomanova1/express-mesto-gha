@@ -26,8 +26,6 @@ app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(errors());
-
 // Использование роутов пользователей
 app.use('/users', auth, require('./routes/users'));
 app.use('/cards', auth, require('./routes/cards'));
@@ -53,10 +51,13 @@ app.post(
   }),
   createUser,
 );
+
+app.use(errors());
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   // если у ошибки нет статуса, выставляем 500
   const { statusCode = 500, message } = err;
+  console.log({ err });
   res
     .status(statusCode)
     .send({
