@@ -1,66 +1,114 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-//  Коды ошибок
-const ERROR_CODE_BAD_REQUEST = 400;
-const ERROR_CODE_NOT_FOUND = 404;
-const ERROR_CODE_DEFAULT = 500;
-
-const errorResponse = (message) => ({ message });
+const NotFoundError = require('../errors/not-found-error');
+const BadRequestError = require('../errors/bad-request-error');
+const Conflict = require('../errors/conflict-error');
+const ServerError = require('../errors/server-error');
+const AuthorisationError = require('../errors/authorisation-error');
 
 // Контроллер для получения всех пользователей
-module.exports.getUsers = (req, res) => {
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send({ data: users }))
-    .catch(() => res.status(ERROR_CODE_DEFAULT).send({ message: 'Произошла ошибка' }));
+    .catch(next);
 };
 
 // Контроллер для получения пользователя по ID
-module.exports.getUserById = (req, res) => {
+module.exports.getUserById = (req, res, next) => {
   const { userId } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Пользователь по указанному _id не найден'));
+    throw new BadRequestError('Пользователь по указанному _id не найден');
   }
 
   return User.findById(userId)
     .then((user) => {
       if (!user) {
-        return res.status(ERROR_CODE_NOT_FOUND).send(errorResponse('Пользователь по указанному _id не найден'));
+        throw new NotFoundError('Нет пользователя с таким id');
       }
       return res.send({ data: user });
     })
-    .catch(() => res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка')));
+    .catch(next);
 };
 
 // Контроллер для создания пользователей
-module.exports.createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
+module.exports.createUser = (req, res, next) => {
+  const {
+    name = 'Жак-Ив Кусто',
+    about = 'Исследователь',
+    avatar = 'ссылка',
+    email,
+    password,
+  } = req.body;
 
-  User.create({ name, about, avatar })
-    .then((user) => {
-      res.status(201).send({ data: user });
+  // Хеширование пароля
+  bcrypt.hash(password, 10, (err, hash) => {
+    if (err) {
+      throw new ServerError('Произошла ошибка при хешировании пароля');
+    }
+
+    return User.create({
+      name, about, avatar, email, password: hash,
     })
-    .catch((error) => {
-      if (error.name === 'ValidationError') {
-        return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
-      }
-      return res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка'));
-    });
+      .then((user) => {
+        res.status(201).send({ data: user });
+      })
+      .catch((error) => {
+        if (error.name === 'ValidationError') {
+          next(new BadRequestError('Введены некорректные данные'));
+        } else if (error.code === 11000) {
+          next(new Conflict('Такой пользователь уже существует!)'));
+        } else {
+          next(error);
+        }
+      });
+  });
+};
+
+// Контроллер для аутентификации пользователя и выдачи JWT-токена
+
+module.exports.login = async (req, res, next) => {
+  const { email, password } = req.body;
+
+  const SECRET_KEY = 'your-secret-key';
+  const TOKEN_EXPIRATION = '7d';
+
+  try {
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user) {
+      throw new AuthorisationError('Аутентификация не удалась. Пользователь не найден.');
+    }
+
+    const result = await bcrypt.compare(password, user.password);
+
+    if (result) {
+      // Если пароль верный, создаем и отправляем JWT
+      const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: TOKEN_EXPIRATION });
+      res.cookie('jwt', token, { httpOnly: true });
+      return res.status(200).send({ message: 'Аутентификация успешна.' });
+    }
+    throw new AuthorisationError('Аутентификация не удалась. Неверный пароль.');
+  } catch (error) {
+    next(error);
+  }
 };
 
 // Контроллер для обновления профиля пользователя
 // eslint-disable-next-line consistent-return
-module.exports.updateProfile = (req, res) => {
+module.exports.updateProfile = (req, res, next) => {
   const userId = req.user._id;
 
   const allowedFields = ['name', 'about'];
 
   if (!allowedFields.every(((item) => req.body[item]))) {
-    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
+    throw new BadRequestError('Переданы некорректные данные');
   }
 
   if (req.body.name && req.body.name.length >= 30) {
-    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
+    throw new BadRequestError('Переданы некорректные данные');
   }
 
   const updatedFields = {};
@@ -71,19 +119,31 @@ module.exports.updateProfile = (req, res) => {
     }
   });
 
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new NotFoundError('Нет пользователя с таким id');
+  }
+
   User.findByIdAndUpdate(userId, { $set: updatedFields }, { new: true })
     .then((updatedUser) => {
       if (!updatedUser) {
-        return res.status(ERROR_CODE_NOT_FOUND).send(errorResponse('Пользователь не найден'));
+        throw new NotFoundError('Нет пользователя с таким id');
       }
       return res.status(200).send({ data: updatedUser });
     })
-    .catch(() => res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка')));
+    .catch(next);
+};
+
+// Контроллер для получения информации о текущем пользователе
+module.exports.getCurrentUser = (req, res) => {
+  const currentUser = req.user;
+
+  // Возвращаем информацию о текущем пользователе
+  return res.json(currentUser);
 };
 
 // Контроллер для обновления аватар
 // eslint-disable-next-line consistent-return
-module.exports.updateAvatar = (req, res) => {
+module.exports.updateAvatar = (req, res, next) => {
   const userId = req.user._id;
 
   const allowedFields = ['avatar'];
@@ -96,14 +156,12 @@ module.exports.updateAvatar = (req, res) => {
   });
 
   if (Object.keys(updatedFields).length === 0) {
-    return res.status(ERROR_CODE_BAD_REQUEST).send(errorResponse('Переданы некорректные данные'));
+    throw new BadRequestError('Переданы некорректные данные');
   }
 
   User.findByIdAndUpdate(userId, { $set: updatedFields }, { new: true })
     .then((updatedUser) => {
       res.status(200).send({ data: updatedUser });
     })
-    .catch(() => {
-      res.status(ERROR_CODE_DEFAULT).send(errorResponse('Произошла ошибка'));
-    });
+    .catch(next);
 };
