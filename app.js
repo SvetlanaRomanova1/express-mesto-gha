@@ -18,6 +18,7 @@ db.once('open', () => {
   console.log('Connected to MongoDB');
 });
 
+const { celebrate, Joi, errors } = require('celebrate');
 const auth = require('./middlewares/auth');
 
 app.use(cookieParser());
@@ -29,12 +30,31 @@ app.use('/users', auth, require('./routes/users'));
 app.use('/cards', auth, require('./routes/cards'));
 
 // Обработчики для регистрации и входа (аутентификации)
-app.post('/signin', require('./controllers/users').login);
-app.post('/signup', require('./controllers/users').createUser);
+app.post('/signin', celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().required().email({ tlds: { allow: false } }),
+    password: Joi.string().required(),
+  }),
+}), require('./controllers/users').login);
+app.post(
+  '/signup',
+  celebrate({
+    body: Joi.object().keys({
+      name: Joi.string().min(2).max(30),
+      about: Joi.string().min(2).max(30),
+      avatar: Joi.string().regex(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/),
+      email: Joi.string().required().email({ tlds: { allow: false } }),
+      password: Joi.string().required(),
+    }),
+  }),
+  require('./controllers/users').createUser,
+);
 // Middleware for handling undefined routes
 app.use((req, res) => {
   res.status(404).json({ message: 'Not Found' });
 });
+
+app.use(errors());
 
 // наш централизованный обработчик
 app.use((err, req, res) => {
