@@ -92,15 +92,12 @@ module.exports.login = async (req, res, next) => {
       // Если пароль верный, создаем и отправляем JWT
       const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: TOKEN_EXPIRATION });
       res.cookie('jwt', token, { httpOnly: true });
-      return res.status(200).send({ message: 'Аутентификация успешна.' });
+      res.status(200).send({ message: 'Аутентификация успешна.' });
       // const token = jwt.sign(
       //   { _id: user._id },
       //   SECRET_KEY,
       //   { expiresIn: TOKEN_EXPIRATION },
       // );
-
-      // вернём токен
-      res.send({ token });
     }
     throw new AuthorisationError('Аутентификация не удалась. Неверный пароль.');
   } catch (error) {
