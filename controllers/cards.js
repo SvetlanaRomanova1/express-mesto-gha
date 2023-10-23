@@ -3,6 +3,7 @@ const Card = require('../models/card');
 const NotFoundError = require('../errors/not-found-error');
 const BadRequestError = require('../errors/bad-request-error');
 const ServerError = require('../errors/server-error');
+const Forbidden = require('../errors/forbidden-error');
 
 // Контроллер для получения всех карточек
 module.exports.getCards = (req, res, next) => {
@@ -46,7 +47,7 @@ module.exports.deleteCardId = (req, res, next) => {
         return res.send({ data: card });
       }
       // Запрещено удалять
-      throw new ServerError('Вы не можете удалить эту картинку');
+      throw new Forbidden('Вы не можете удалить эту картинку');
     })
     .catch(next);
 };
