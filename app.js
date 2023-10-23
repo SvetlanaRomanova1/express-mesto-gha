@@ -20,10 +20,13 @@ db.once('open', () => {
 
 const { celebrate, Joi, errors } = require('celebrate');
 const auth = require('./middlewares/auth');
+const { createUser } = require('./controllers/users');
 
 app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(errors());
 
 // Использование роутов пользователей
 app.use('/users', auth, require('./routes/users'));
@@ -36,6 +39,7 @@ app.post('/signin', celebrate({
     password: Joi.string().required(),
   }),
 }), require('./controllers/users').login);
+
 app.post(
   '/signup',
   celebrate({
@@ -47,17 +51,10 @@ app.post(
       password: Joi.string().required(),
     }),
   }),
-  require('./controllers/users').createUser,
+  createUser,
 );
-// Middleware for handling undefined routes
-app.use((req, res) => {
-  res.status(404).json({ message: 'Not Found' });
-});
-
-app.use(errors());
-
-// наш централизованный обработчик
-app.use((err, req, res) => {
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
   // если у ошибки нет статуса, выставляем 500
   const { statusCode = 500, message } = err;
   res
@@ -69,6 +66,12 @@ app.use((err, req, res) => {
         : message,
     });
 });
+// Middleware for handling undefined routes
+app.use((req, res) => {
+  res.status(404).json({ message: 'Not Found' });
+});
+
+// наш централизованный обработчик
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
