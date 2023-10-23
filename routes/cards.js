@@ -33,6 +33,14 @@ router.put('/:cardId/likes', celebrate({
   }),
 }), likeCard);
 // Роутер удаления карточки по идентификатору
-router.delete('/:cardId/likes', dislikeCard);
+router.delete(
+  '/:cardId/likes',
+  celebrate({
+    params: Joi.object().keys({
+      cardId: Joi.string().hex().length(24),
+    }),
+  }),
+  dislikeCard,
+);
 
 module.exports = router;
